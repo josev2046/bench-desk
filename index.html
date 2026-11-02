@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+<title>Bench Desk</title>
+<style>
+:root{--bg:#e3e6e4;--panel:#f2f4f2;--ink:#192227;--mute:#5d6a70;--line:#b8c0bc;--accent:#1d5c8f;--ok:#2d7a4e;--warn:#c98300;--bad:#b3372c;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#161b1e;--panel:#20272b;--ink:#e6ebe8;--mute:#93a0a6;--line:#3a464c;--accent:#6fb0e6;--ok:#58b883;--warn:#e5a52a;--bad:#e5766b;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 "Avenir Next","Segoe UI",system-ui,sans-serif;font-variant-numeric:tabular-nums}
+main{max-width:1080px;margin:0 auto;padding:20px 16px 60px}
+header{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+h1{font-size:22px;margin:0;font-weight:700;letter-spacing:.01em}
+h2{font-size:15px;margin:0 0 10px;font-weight:700}
+.sub{color:var(--mute);font-size:13px}
+.grid{display:grid;gap:14px}
+.g3{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.g2{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px}
+.big{font-size:44px;font-weight:700;line-height:1}
+.row{display:flex;align-items:center;gap:10px}
+.led{width:14px;height:14px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 25%,transparent)}
+.led.warn{background:var(--warn);box-shadow:0 0 0 3px color-mix(in srgb,var(--warn) 30%,transparent)}
+.led.bad{background:var(--bad);box-shadow:0 0 0 3px color-mix(in srgb,var(--bad) 30%,transparent)}
+.note{color:var(--mute);font-size:13px;margin:6px 0 0}
+.alert{margin-top:10px;padding:8px 10px;border-left:4px solid var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent);font-weight:600;font-size:14px}
+label{display:block;font-size:13px;color:var(--mute);margin-bottom:8px}
+input,select,button{font:inherit;color:inherit}
+input,select{width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:4px;background:var(--bg);margin-top:3px}
+.f{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+button{padding:8px 14px;border-radius:4px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;font-weight:600}
+button.ghost{background:transparent;color:var(--accent);padding:3px 8px;font-size:13px;font-weight:500}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--warn);outline-offset:1px}
+.chk{display:flex;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);color:var(--ink);font-size:15px;margin:0}
+.chk input{width:18px;height:18px;margin:0}
+.chk.done span{text-decoration:line-through;color:var(--mute)}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--mute);font-weight:600;font-size:13px}
+td.n,th.n{text-align:right}
+.tag{padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600;border:1px solid var(--line)}
+.tag.new{border-color:var(--warn);color:var(--warn)}.tag.packed{border-color:var(--accent);color:var(--accent)}
+.tag.posted{border-color:var(--ok);color:var(--ok)}.tag.cancelled{color:var(--mute)}
+.err{color:var(--bad);font-weight:600;min-height:20px}
+details summary{cursor:pointer;font-weight:700}
+.bar{height:8px;background:var(--line);border-radius:4px;margin-top:8px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+</style></head><body><main>
+<header><h1>Bench Desk</h1><span class="sub" id="today"></span>
+<span><button class="ghost" onclick="backup()">Download backup</button> <button class="ghost" onclick="$('#rf').click()">Restore backup</button><input type="file" id="rf" accept=".json" hidden onchange="restore(this.files[0])"></span></header>
+<div class="err" id="err" role="alert"></div>
+<div class="alert" id="setup" hidden>First, open Settings below and enter your prices and costs. Orders can't be logged until you do.</div>
+
+<div class="grid g3" id="top"></div>
+
+<div class="grid g2" style="margin-top:14px">
+  <section class="card"><h2>Today's routine</h2><div id="checks"></div></section>
+  <section class="card"><h2>Log a new order</h2>
+    <form id="orderForm"><div class="f">
+      <label>Date<input type="date" name="date" required></label>
+      <label>Reverb order no.<input name="order_no" placeholder="optional"></label>
+      <label>Format<select name="fmt"><option value="pb">Paperback</option><option value="hc">Hardcover</option></select></label>
+      <label>Price override (£)<input name="price" type="number" step="0.01" placeholder="list price"></label>
+    </div><button>Add order</button></form>
+    <p class="note">Stock, fee and profit are worked out from the settings below.</p>
+  </section>
+</div>
+
+<section class="card" style="margin-top:14px"><h2>Orders</h2><div class="tw"><table id="orders"></table></div></section>
+
+<div class="grid g2" style="margin-top:14px">
+  <section class="card"><h2>Record stock in or out</h2>
+    <form id="moveForm"><div class="f">
+      <label>Date<input type="date" name="date" required></label>
+      <label>What happened<select name="kind"><option value="delivery">KDP delivery arrived</option><option value="damaged">Damaged / lost</option><option value="adjust">Count correction (remove)</option></select></label>
+      <label>Format<select name="fmt"><option value="pb">Paperback</option><option value="hc">Hardcover</option></select></label>
+      <label>Copies<input name="qty" type="number" min="1" required></label>
+      <label>Total cost paid (£)<input name="total_cost" type="number" step="0.01" placeholder="deliveries only"></label>
+      <label>Note<input name="note"></label>
+    </div><button>Save</button></form>
+    <div class="tw" style="margin-top:12px"><table id="moves"></table></div>
+  </section>
+  <section class="card"><details id="setDetails"><summary>Settings (prices, costs, reorder rules)</summary>
+    <form id="setForm" style="margin-top:10px"><div class="f" id="setFields"></div><button>Save settings</button></form>
+    <p class="note">Data is stored in this browser only. Use Download backup now and then, especially before clearing browser data or moving the file.</p><p class="note">Enter your own prices and costs. They are saved in this browser only.</p><p style="margin-top:14px"><button class="ghost" style="color:var(--bad);border-color:var(--bad)" onclick="wipe()">Delete all data</button></p>
+  </details></section>
+</div>
+
+<script>
+const $=s=>document.querySelector(s), gbp=n=>(n<0?"-":"")+"£"+Math.abs(n).toFixed(2);
+const NAMES={pb:"Paperback",hc:"Hardcover"}, TASKS=[["am","9am check: new orders and messages"],["pack","Pack today's orders"],["post","Post parcels"],["track","Upload tracking numbers"],["pm","4pm check: late orders and messages"]];
+const LABELS={price_pb:"Paperback price (£)",price_hc:"Hardcover price (£)",ship_charge:"Postage charged (£)",fee_rate:"Reverb fee (0.05 = 5%)",ship_cost:"Postage + wrap cost (£)",cost_pb:"Paperback copy cost (£)",cost_hc:"Hardcover copy cost (£)",lead_days:"KDP delivery time (days)",buffer_weeks:"Safety buffer (weeks)",cover_weeks:"Order up to (weeks of cover)",plan_weekly:"Planned sales per week",mix_pb:"Paperback share (0.7 = 70%)"};
+let S=null;
+const KEY="benchdesk.v1";
+const DEFAULTS={price_pb:0,price_hc:0,ship_charge:0,fee_rate:0,ship_cost:0,cost_pb:0,cost_hc:0,lead_days:7,buffer_weeks:2,cover_weeks:6,plan_weekly:1,mix_pb:0.5};
+const iso=d=>d.toLocaleDateString("en-CA");
+function fresh(){return{settings:{},orders:[],moves:[],checks:[],nextId:1}}
+function load(){try{const d=JSON.parse(localStorage.getItem(KEY));return d&&d.orders?d:fresh()}catch(e){return fresh()}}
+function save(D){localStorage.setItem(KEY,JSON.stringify(D))}
+function buildState(D){
+  const s={...DEFAULTS,...D.settings},today=iso(new Date());
+  const since=new Date();since.setDate(since.getDate()-28);const sinceS=iso(since);
+  const orders=[...D.orders].sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);
+  const moves=[...D.moves].sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);
+  const live=orders.filter(o=>o.status!=="cancelled"),recent=live.filter(o=>o.date>=sinceS),useActual=recent.length>=4;
+  const stock={},calc={};
+  for(const [f,share] of [["pb",s.mix_pb],["hc",1-s.mix_pb]]){
+    stock[f]=D.moves.filter(m=>m.fmt===f).reduce((a,m)=>a+m.qty,0)-live.filter(o=>o.fmt===f).length;
+    const weekly=useActual?recent.filter(o=>o.fmt===f).length/4:s.plan_weekly*share;
+    const rp=Math.max(2,Math.ceil(weekly*(s.lead_days/7+s.buffer_weeks)));
+    const upto=Math.ceil(weekly*s.cover_weeks);
+    calc[f]={weekly:Math.round(weekly*100)/100,reorder_point:rp,suggest:stock[f]<=rp?Math.max(0,upto-stock[f]):0,days_cover:weekly>0?Math.round(stock[f]/weekly*7):null};
+  }
+  const mo=live.filter(o=>o.date.startsWith(today.slice(0,7)));
+  const sum=(a,fn)=>a.reduce((t,o)=>t+fn(o),0);
+  return{configured:!!D.configured||Object.keys(D.settings).length>0,settings:s,orders,moves:moves.slice(0,60),stock,calc,today,
+    summary:{month:today.slice(0,7),orders:mo.length,profit:Math.round(sum(mo,o=>o.profit)*100)/100,receipts:Math.round(sum(mo,o=>o.price+o.ship_charge)*100)/100,
+      source:useActual?"your last 28 days":"the plan's weekly rate (fewer than 4 recent orders)"},
+    checks:D.checks.filter(c=>c.date===today).map(c=>c.key)};
+}
+function mutate(path,d){
+  const D=load(),s={...DEFAULTS,...D.settings};
+  if(path==="/api/order"){
+    if(!(D.configured||Object.keys(D.settings).length))throw new Error("Enter your prices and costs in Settings first.");
+    if(d.fmt!=="pb"&&d.fmt!=="hc")throw new Error("Unknown format.");
+    const f=d.fmt,price=parseFloat(d.price)||s["price_"+f];
+    const ship=(d.ship_charge===undefined||d.ship_charge==="")?s.ship_charge:parseFloat(d.ship_charge);
+    const fee=Math.round((price+ship)*s.fee_rate*100)/100,cc=s["cost_"+f];
+    const profit=Math.round((price+ship-fee-cc-s.ship_cost)*100)/100;
+    D.orders.push({id:D.nextId++,date:d.date,order_no:d.order_no||"",fmt:f,price,ship_charge:ship,fee,ship_cost:s.ship_cost,copy_cost:cc,profit,status:"new",tracking:""});
+  }else if(path==="/api/order/status"){
+    const o=D.orders.find(x=>x.id===d.id);if(o){o.status=d.status;if(d.tracking)o.tracking=d.tracking;}
+  }else if(path==="/api/move"){
+    const q=Math.abs(parseInt(d.qty));if(!q)throw new Error("Enter a number of copies.");
+    D.moves.push({id:D.nextId++,date:d.date,kind:d.kind,fmt:d.fmt,qty:d.kind==="delivery"?q:-q,total_cost:parseFloat(d.total_cost)||0,note:d.note||""});
+  }else if(path==="/api/settings"){
+    for(const k in d)if(k in DEFAULTS){const v=parseFloat(d[k]);if(!isFinite(v)||v<0)throw new Error("Check the value for "+k);D.settings[k]=v;}D.configured=true;
+  }else if(path==="/api/check"){
+    D.checks=D.checks.filter(c=>!(c.date===d.date&&c.key===d.key));if(d.done)D.checks.push({date:d.date,key:d.key});
+  }
+  save(D);
+}
+async function api(path,body){
+  try{if(body)mutate(path,body);S=buildState(load());$("#err").textContent="";render();}
+  catch(e){$("#err").textContent="Something went wrong: "+e.message+" (If this mentions storage, open the file in a normal, non-private browser window.)";}
+}
+function wipe(){if(prompt("This permanently deletes all orders, stock records and settings in this browser. Type DELETE to confirm.")!=="DELETE")return;localStorage.removeItem(KEY);$("#setFields").innerHTML="";api("/api/state");}
+function backup(){
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(load(),null,1)],{type:"application/json"}));
+  a.download="bench-desk-backup-"+iso(new Date())+".json";a.click();
+}
+function restore(file){
+  const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!Array.isArray(d.orders)||!Array.isArray(d.moves)||!Array.isArray(d.checks)||typeof d.settings!=="object")throw new Error("not a Bench Desk backup");
+    if(!confirm("Replace everything in this browser with the backup?"))return;save(d);$("#setFields").innerHTML="";api("/api/state");}
+    catch(e){$("#err").textContent="Could not restore: "+e.message;}};r.readAsText(file);
+}
+function esc(t){return String(t??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function render(){
+  $("#setup").hidden=S.configured;if(!S.configured)$("#setDetails").open=true;
+  $("#today").textContent=new Date(S.today).toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  let h="";
+  for(const f of ["pb","hc"]){
+    const n=S.stock[f],c=S.calc[f],lvl=n<=0?"bad":n<=c.reorder_point?"warn":"";
+    h+=`<section class="card"><div class="row"><span class="led ${lvl}"></span><h2 style="margin:0">${NAMES[f]} in stock</h2></div>
+    <div class="big" style="margin:10px 0 4px">${n}</div>
+    <p class="note" style="margin:0">Reorder at ${c.reorder_point} · selling ~${c.weekly}/week${c.days_cover!=null&&n>0?` · ~${c.days_cover} days of cover`:""}</p>
+    ${c.suggest?`<div class="alert">Order ${c.suggest} ${NAMES[f].toLowerCase()}s from KDP now</div>`:""}</section>`;
+  }
+  const m=S.summary;
+  h+=`<section class="card"><h2>This month</h2><div class="big">${gbp(m.profit)}</div>
+  <p class="note" style="margin:6px 0 0">${m.orders} orders · ${gbp(m.receipts)} receipts</p>
+  <p class="note">Reorder maths uses ${m.source}.</p></section>`;
+  $("#top").innerHTML=h;
+  $("#checks").innerHTML=TASKS.map(([k,t])=>`<label class="chk ${S.checks.includes(k)?"done":""}"><input type="checkbox" data-k="${k}" ${S.checks.includes(k)?"checked":""}><span>${t}</span></label>`).join("")
+    +`<p class="note">Weekly: count stock, check reorder level, restock wraps. Monthly: compare real costs with the plan.</p>`;
+  document.querySelectorAll("#checks input").forEach(i=>i.onchange=()=>api("/api/check",{date:S.today,key:i.dataset.k,done:i.checked}));
+  $("#orders").innerHTML=`<tr><th>Date</th><th>Order</th><th>Format</th><th class="n">Profit</th><th>Status</th><th>Tracking</th><th></th></tr>`+
+    (S.orders.length?S.orders.slice(0,40).map(o=>`<tr><td>${esc(o.date)}</td><td>${esc(o.order_no)||"-"}</td><td>${esc(NAMES[o.fmt])}</td><td class="n">${gbp(o.profit)}</td>
+    <td><span class="tag ${esc(o.status)}">${{new:"To pack",packed:"Packed",posted:"Posted",cancelled:"Cancelled"}[o.status]}</span></td>
+    <td>${esc(o.tracking)||"-"}</td><td>${o.status==="new"?`<button class="ghost" data-a="packed" data-id="${esc(o.id)}">Mark packed</button>`:""}
+    ${o.status==="packed"?`<button class="ghost" data-a="posted" data-id="${esc(o.id)}">Mark posted</button>`:""}
+    ${o.status!=="cancelled"?`<button class="ghost" data-a="cancelled" data-id="${esc(o.id)}">Cancel</button>`:""}</td></tr>`).join(""):`<tr><td colspan="7">No orders yet. Log your first sale above.</td></tr>`);
+  document.querySelectorAll("#orders button").forEach(b=>b.onclick=()=>{
+    let tr="";if(b.dataset.a==="posted")tr=prompt("Tracking number (optional)")||"";
+    if(b.dataset.a==="cancelled"&&!confirm("Cancel this order and return the copy to stock?"))return;
+    api("/api/order/status",{id:+b.dataset.id,status:b.dataset.a,tracking:tr});});
+  $("#moves").innerHTML=`<tr><th>Date</th><th>Event</th><th>Format</th><th class="n">Copies</th></tr>`+
+    (S.moves.length?S.moves.slice(0,8).map(x=>`<tr><td>${esc(x.date)}</td><td>${{delivery:"Delivery",damaged:"Damaged",adjust:"Correction"}[x.kind]}</td><td>${esc(NAMES[x.fmt])}</td><td class="n">${x.qty>0?"+":""}${x.qty}</td></tr>`).join(""):`<tr><td colspan="4">Nothing recorded. Add your opening batch as a delivery.</td></tr>`);
+  if(!$("#setFields").children.length)$("#setFields").innerHTML=Object.keys(LABELS).map(k=>`<label>${LABELS[k]}<input name="${k}" type="number" step="any" value="${S.configured?S.settings[k]:''}" required></label>`).join("");
+}
+for(const id of ["orderForm","moveForm"])$("#"+id).querySelector("[name=date]").value=new Date().toLocaleDateString("en-CA");
+$("#orderForm").onsubmit=e=>{e.preventDefault();api("/api/order",Object.fromEntries(new FormData(e.target)));e.target.order_no.value="";e.target.price.value=""};
+$("#moveForm").onsubmit=e=>{e.preventDefault();api("/api/move",Object.fromEntries(new FormData(e.target)));e.target.qty.value="";e.target.total_cost.value="";e.target.note.value=""};
+$("#setForm").onsubmit=e=>{e.preventDefault();api("/api/settings",Object.fromEntries(new FormData(e.target)))};
+api("/api/state");
+</script></main></body></html>
